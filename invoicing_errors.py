@@ -25,6 +25,33 @@ def strclean(in_str):
     return out_str
 
 
+def getExceptionList():
+    """
+    Creates a list of invoice numbers, customer names, etc. from a text file.
+    Items inside this list are omitted from search results.
+    :return: return_list - the list mentioned above.
+    """
+    return_list = []
+    with open("ignore_list.txt", "r") as read_file:
+        for line in read_file:
+            return_list.append(line)
+
+    return return_list
+
+
+def saveExceptionList(exceptions):
+    """
+    Saves a list of invoice numbers, customer names, etc. to a text file for
+    later use. This file is read upon running the program, and items inside
+    are omitted from search results.
+    :param exceptions: A list of invoice numbers, customer names, etc.
+    :return: None
+    """
+    with open("ignore_list.txt", "w") as write_file:
+        for item in exceptions:
+            write_file.writeline(item)
+
+
 # Determines if a customer is a wholesaler
 def isWholesaler(cust):
     wholesalers = [
@@ -65,6 +92,10 @@ def main_loop():
 
     num_pages = 120
     current_page = 1
+
+    # Get the list of invoices, customers, etc. to ignore
+    ignorelist = getExceptionList()
+    used_ignorelist = []
 
     # Creating a new page request object
     scrape_url = "https://system.silencerco.com/invoices?page=" + \
@@ -147,6 +178,9 @@ def main_loop():
                     for item in export_list:
                         resultswriter.writerow(item)
                     print("Results saved in " + file.name)
+
+                saveExceptionList(used_ignorelist)
+
                 exit()
             else:
                 scrape_url = None
@@ -216,6 +250,14 @@ def main_loop():
             idate = datetime.datetime.today()
 
         show_detail = True
+
+        # Determine if the line item is in the exception list
+        if refnum in ignorelist or cust in ignorelist:
+            show_detail = False
+            if refnum in ignorelist:
+                used_ignorelist.append(refnum)
+            else:
+                used_ignorelist.append(cust)
 
         if not cts and \
                 (datetime.datetime.today() - idate).days >= 2 and \
